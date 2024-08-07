@@ -1,0 +1,7 @@
+---
+ca_certs: []
+
+ca_certs_strings: |
+  {% for ca_cert in ca_certs %}
+  {{ lookup('file', ca_cert) }}
+  {% endfor %}

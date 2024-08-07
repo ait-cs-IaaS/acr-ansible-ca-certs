@@ -1,0 +1,48 @@
+---
+- name: Ensure CA destination directory exists
+  become: true
+  ansible.builtin.file:
+    path: '/usr/local/share/ca-certificates'
+    state: directory
+    group: 'root'
+    owner: 'root'
+    mode: '0755'
+    recurse: true
+
+- name: Add ca certificates
+  become: true
+  ansible.builtin.copy:
+    dest: '/usr/local/share/ca-certificates/{{ item | basename }}'
+    src: '{{ item }}'
+    group: 'root'
+    owner: 'root'
+    mode: '0644'
+  with_items: '{{ ca_certs }}'
+
+- name: Update CA Certificate
+  become: true
+  ansible.builtin.command:
+    cmd: '/usr/sbin/update-ca-certificates'
+  changed_when: false
+
+- name: Ensure pip and requests library is installed
+  become: true
+  ansible.builtin.apt:
+      name:
+        - python3-pip
+        - python3-requests
+      update_cache: true
+      cache_valid_time: 3600
+
+- name: Get certifi bundle locations
+  ansible.builtin.command:
+      cmd: python3 -c "import requests.utils; print(requests.utils.DEFAULT_CA_BUNDLE_PATH)"
+  register: requests_cert_bundle
+  changed_when: requests_cert_bundle.rc == 0
+
+- name: Append CA certificate to the requests module certificates bundle
+  ansible.builtin.blockinfile:
+    path: "{{ requests_cert_bundle.stdout }}"
+    marker: '# {mark} CyberRange CA'
+    block: "{{ ca_certs_strings }}"
+  when: requests_cert_bundle.stdout is defined

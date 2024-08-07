@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+  # remote_user: root
+  # roles:
+  #   - ca-certs
+  vars:
+    ca_certs_certifi_location_command: import requests; print(requests.certs.where())
+    ca_certs:
+      - /ad/cert1.pem
+      - /asd/asd/asd7/cert2.pem
+  tasks:
+    - include_tasks: ../tasks/python.yml
+    # - debug:
+    #     var: python_executables
+    # - debug:
+    #     var: certifi_bundles
