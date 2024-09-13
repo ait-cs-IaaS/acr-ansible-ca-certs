@@ -38,9 +38,21 @@
   register: requests_cert_bundle
   changed_when: requests_cert_bundle.rc == 0
 
+- name: Check if the certificate string is already present
+  ansible.builtin.shell:
+    cmd: grep "{{ lookup('file', item).splitlines()[1] | trim }}" "{{ requests_cert_bundle.stdout }}" || true
+  register: certs_present
+  ignore_errors: true
+  with_items: "{{ ca_certs }}"
+  when: requests_cert_bundle is defined
+  changed_when: true
+
 - name: Append CA certificate to the requests module certificates bundle
   ansible.builtin.blockinfile:
     path: "{{ requests_cert_bundle.stdout }}"
-    marker: '# {mark} CyberRange CA'
-    block: "{{ ca_certs_strings }}"
-  when: requests_cert_bundle.stdout is defined
+    marker: '# {mark} {{ new_cert_entry.item | basename }}'
+    block: "{{ lookup('file', new_cert_entry.item) }}"
+  loop: "{{ certs_present.results | selectattr('stdout', 'equalto', '') | default([]) | list }}"
+  loop_control:
+    loop_var: new_cert_entry
+    label: 'Added: {{ new_cert_entry.item }}'
